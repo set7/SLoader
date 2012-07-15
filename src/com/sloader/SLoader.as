@@ -7,18 +7,47 @@ package com.sloader
 	import flash.system.SecurityDomain;
 	import flash.utils.Dictionary;
 
+	/**
+	 * Achieve load the main class, you can create more this instance.
+	 * The in sloaderManage Class can manage all the data loaded.
+	 * @author number1
+	 * 
+	 */	
 	public class SLoader
 	{
+		/**
+		 * Current instance loaderContext, all ready load files will be loaded into.
+		 */		
 		private var _loaderContext:LoaderContext;
 		
+		/**
+		 * 
+		 */		
 		private var _loadInfo:SLoaderInfo;
 		
+		/**
+		 * Current events mechanism
+		 * I used a hash table to handler the event mapping and execution.
+		 * 
+		 * ==Group Correlation==
+		 * method: addEventListener(type:String, handler:Function)
+		 * method: removeEventListener(type:String, handler:Function)
+		 */		
 		private var _eventHandlers:Dictionary;
 		
+		/**
+		 * Save all loaded files
+		 */		
 		private var _loadedFiles:Array;
 		
+		/**
+		 * Sava the file number of bytes currently loaded
+		 */		
 		private var _loadedBytes:Number;
 		
+		/**
+		 * Concurrent load the number of threads
+		 */		
 		private const _concurrent:uint = 3;
 		
 		////////////////////////////////////////////////////////////////////////
