@@ -1,35 +1,31 @@
-package com.sloader.loadhandlers
+package com.sloader.handlers
 {
-	import com.sloader.SLoaderError;
-	import com.sloader.SLoaderFile;
+	import com.sloader.define.SLoaderError;
+	import com.sloader.define.SLoaderFile;
 	
+	import flash.display.Bitmap;
+	import flash.display.Loader;
 	import flash.events.Event;
 	import flash.events.IOErrorEvent;
 	import flash.events.ProgressEvent;
-	import flash.net.URLLoader;
-	import flash.net.URLLoaderDataFormat;
 	import flash.net.URLRequest;
 	import flash.system.LoaderContext;
-	import flash.text.StyleSheet;
 	
-	public class CSS_LoadHandler extends LoadHandler
+	public class SLoadHandler_Image extends SLoadHandler
 	{
-		public var data:StyleSheet;
+		public var bitmap:Bitmap;
 		
-		private var _loader:URLLoader;
+		private var _loader:Loader;
 		
-		public function CSS_LoadHandler(fileVO:SLoaderFile, loaderContent:LoaderContext)
+		public function SLoadHandler_Image(fileVO:SLoaderFile, loaderContext:LoaderContext)
 		{
-			super(fileVO, loaderContent);
+			super(fileVO, loaderContext);
 			
-			_file.loaderInfo.loadHandler = this;
-			_loader.dataFormat = URLLoaderDataFormat.TEXT;
-			
-			_loader = new URLLoader();
-			_loader.addEventListener(Event.OPEN, onFileStart);
-			_loader.addEventListener(ProgressEvent.PROGRESS, onFileProgress);
-			_loader.addEventListener(Event.COMPLETE, onFileComplete);
-			_loader.addEventListener(IOErrorEvent.IO_ERROR, onFileIoError);
+			_loader = new Loader();
+			_loader.contentLoaderInfo.addEventListener(Event.OPEN, onFileStart);
+			_loader.contentLoaderInfo.addEventListener(ProgressEvent.PROGRESS, onFileProgress);
+			_loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onFileComplete);
+			_loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onFileIoError);
 		}
 		
 		protected function onFileIoError(event:IOErrorEvent):void
@@ -46,8 +42,7 @@ package com.sloader.loadhandlers
 			_file.loaderInfo.loadedBytes = event.currentTarget.bytesLoaded;
 			_file.loaderInfo.totalBytes = event.currentTarget.bytesTotal;
 			
-			data = new StyleSheet();
-			data.parseCSS(_loader.data);
+			bitmap = _loader.content as Bitmap;
 			
 			if (_onFileComplete != null)
 				_onFileComplete(_file);
@@ -69,16 +64,17 @@ package com.sloader.loadhandlers
 				_onFileStart(_file);
 		}
 		
-		override public function load():void
+		override public function startLoad():void
 		{
 			var urlRequest:URLRequest = new URLRequest(_file.url);
-			_loader.load(urlRequest);
+			_loader.load(urlRequest, _loaderContext);
 		}
 		
 		override public function unLoad():void
 		{
 			super.unLoad();
-			data = null;
+			_loader.unload();
+			bitmap = null;
 		}
 	}
 }

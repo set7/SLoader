@@ -1,7 +1,7 @@
-package com.sloader.loadhandlers
+package com.sloader.handlers
 {
-	import com.sloader.SLoaderError;
-	import com.sloader.SLoaderFile;
+	import com.sloader.define.SLoaderError;
+	import com.sloader.define.SLoaderFile;
 	
 	import flash.display.Loader;
 	import flash.events.Event;
@@ -10,15 +10,13 @@ package com.sloader.loadhandlers
 	import flash.net.URLRequest;
 	import flash.system.LoaderContext;
 
-	public class SWF_LoadHandler extends LoadHandler
+	public class SLoadHandler_SWF extends SLoadHandler
 	{
 		private var _loader:Loader;
 		
-		public function SWF_LoadHandler(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoadHandler_SWF(fileVO:SLoaderFile, loaderContext:LoaderContext)
 		{
 			super(fileVO, loaderContext);
-			
-			_file.loaderInfo.loadHandler = this;
 			
 			_loader = new Loader();
 			_loader.contentLoaderInfo.addEventListener(Event.OPEN, onFileStart);
@@ -61,7 +59,7 @@ package com.sloader.loadhandlers
 				_onFileStart(_file);
 		}
 
-		override public function load():void
+		override public function startLoad():void
 		{
 			var urlRequest:URLRequest = new URLRequest(_file.url);
 			_loader.load(urlRequest, _loaderContext);

@@ -1,11 +1,11 @@
-package com.sloader.loadhandlers
+package com.sloader.handlers
 {
-	import com.sloader.SLoaderFile;
-	import com.sloader.SLoaderFileInfo;
+	import com.sloader.define.SLoaderFile;
+	import com.sloader.define.SLoaderFileInfo;
 	
 	import flash.system.LoaderContext;
 
-	public class LoadHandler
+	public class SLoadHandler
 	{
 		protected var _file:SLoaderFile;
 		protected var _loaderContext:LoaderContext;
@@ -15,7 +15,7 @@ package com.sloader.loadhandlers
 		protected var _onFileStart:Function = null;
 		protected var _onFileIoError:Function = null;
 
-		public function LoadHandler(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoadHandler(fileVO:SLoaderFile, loaderContext:LoaderContext)
 		{
 			_file = fileVO;
 			_file.loaderInfo = new SLoaderFileInfo();
@@ -42,16 +42,19 @@ package com.sloader.loadhandlers
 			_onFileIoError = handler;
 		}
 
-		public function load():void
+		public function startLoad():void
 		{
 
 		}
 		
+		public function stopLoad():void
+		{
+			
+		}
+		
 		public function unLoad():void
 		{
-			_file.size = Number.NaN;
 			_file.loaderInfo.loadedBytes = 0;
-			_file.loaderInfo.totalBytes = 0;
 		}
 	}
 }

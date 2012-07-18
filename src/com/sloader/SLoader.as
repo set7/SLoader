@@ -1,53 +1,36 @@
 package com.sloader
 {
-	import com.sloader.loadhandlers.LoadHandler;
+	import com.sloader.define.SLoaderError;
+	import com.sloader.define.SLoaderEventType;
+	import com.sloader.define.SLoaderFile;
+	import com.sloader.define.SLoaderFileInfo;
+	import com.sloader.define.SLoaderFileType;
+	import com.sloader.define.SLoaderInfo;
+	import com.sloader.handlers.SLoadHandler;
+	import com.sloader.handlers.SLoadHandler_Binary;
+	import com.sloader.handlers.SLoadHandler_CSS;
+	import com.sloader.handlers.SLoadHandler_Image;
+	import com.sloader.handlers.SLoadHandler_SWF;
+	import com.sloader.handlers.SLoadHandler_XML;
 	
 	import flash.system.ApplicationDomain;
 	import flash.system.LoaderContext;
 	import flash.system.SecurityDomain;
 	import flash.utils.Dictionary;
 
-	/**
-	 * Achieve load the main class, you can create more this instance.
-	 * The in sloaderManage Class can manage all the data loaded.
-	 * @author number1
-	 * 
-	 */	
 	public class SLoader
 	{
-		/**
-		 * Current instance loaderContext, all ready load files will be loaded into.
-		 */		
 		private var _loaderContext:LoaderContext;
 		
-		/**
-		 * 
-		 */		
 		private var _loadInfo:SLoaderInfo;
 		
-		/**
-		 * Current events mechanism
-		 * I used a hash table to handler the event mapping and execution.
-		 * 
-		 * ==Group Correlation==
-		 * method: addEventListener(type:String, handler:Function)
-		 * method: removeEventListener(type:String, handler:Function)
-		 */		
 		private var _eventHandlers:Dictionary;
+		private var _fileHandlers:Object;
 		
-		/**
-		 * Save all loaded files
-		 */		
 		private var _loadedFiles:Array;
 		
-		/**
-		 * Sava the file number of bytes currently loaded
-		 */		
 		private var _loadedBytes:Number;
 		
-		/**
-		 * Concurrent load the number of threads
-		 */		
 		private const _concurrent:uint = 3;
 		
 		////////////////////////////////////////////////////////////////////////
@@ -69,6 +52,8 @@ package com.sloader
 		private var _currLoadedBytes:Number;
 
 		private var _currLoadPercentage:Number;
+		
+		private var _currLoadCover:Boolean;
 		////////////////////////////////////////////////////////////////////////
 		
 		public function SLoader(name:String, loaderContext:LoaderContext=null)
@@ -77,8 +62,8 @@ package com.sloader
 			
 			_loaderContext = loaderContext ? loaderContext:new LoaderContext(false, ApplicationDomain.currentDomain, SecurityDomain.currentDomain);
 			
-			registerEventHandler();
-			
+			initializeEventHandler();
+			initializeFileHandler();
 			initializePar();
 		}
 		
@@ -102,7 +87,7 @@ package com.sloader
 			_lastProgressLoadedBytes = {};
 		}
 		
-		private function registerEventHandler():void
+		private function initializeEventHandler():void
 		{
 			_eventHandlers = new Dictionary();
 			_eventHandlers[SLoaderEventType.FILE_COMPLETE] = [];
@@ -114,6 +99,17 @@ package com.sloader
 			_eventHandlers[SLoaderEventType.SLOADER_START] = [];
 		}
 		
+		private function initializeFileHandler():void
+		{
+			_fileHandlers[SLoaderFileType.SWF.toLowerCase()] = SLoadHandler_SWF;
+			_fileHandlers[SLoaderFileType.XML.toLowerCase()] = SLoadHandler_XML;
+			_fileHandlers[SLoaderFileType.PNG.toLowerCase()] = SLoadHandler_Image;
+			_fileHandlers[SLoaderFileType.JPG.toLowerCase()] = SLoadHandler_Image;
+			_fileHandlers[SLoaderFileType.BMP.toLowerCase()] = SLoadHandler_Image;
+			_fileHandlers[SLoaderFileType.CSS.toLowerCase()] = SLoadHandler_CSS;
+			_fileHandlers[SLoaderFileType.DAT.toLowerCase()] = SLoadHandler_Binary;
+		}
+		
 		///////////////////////////////////////////////////////////////////////////
 		// loadListManage
 		///////////////////////////////////////////////////////////////////////////
@@ -121,7 +117,8 @@ package com.sloader
 		{
 			checkLoadIt();
 			checkFileVO(fileVO);
-			checkRepeatFileVO(fileVO);
+			if (checkRepeatFileVO(fileVO))
+				trace("To Find duplicate (title) attribute of the file on use addFile method");
 			
 			_currLoadFiles.push(fileVO);
 		}
@@ -134,7 +131,8 @@ package com.sloader
 			{
 				var fileVO:SLoaderFile = files[i];
 				checkFileVO(fileVO);
-				checkRepeatFileVO(fileVO);
+				if (checkRepeatFileVO(fileVO))
+					trace("To Find duplicate (title) attribute of the file on use addFiles method");
 				
 				_currLoadFiles.push(fileVO);
 			}
@@ -149,7 +147,10 @@ package com.sloader
 				_currLoadFiles.splice(index, 1);
 		}
 		
-		public function execute():void
+		/**
+		 * @param coverRepeatTitle 当重复的title发生在本次加载文件和文件过的之间时, 是否用最新加载的文件替换旧文件
+		 */		
+		public function execute(coverRepeatTitle:Boolean=true):void
 		{
 			checkLoadIt();
 			
@@ -159,6 +160,8 @@ package com.sloader
 			//////////////////////////////////
 			// 初始化一些加载过程中会用到的数据
 			_isLoading = true;
+			
+			_currLoadCover = coverRepeatTitle;
 			
 			currTotalBytes = 0;
 			for each(var fileVO:SLoaderFile in _currLoadFiles)
@@ -190,6 +193,42 @@ package com.sloader
 			executeConcurrent();
 		}
 		
+		private function executeConcurrent():void
+		{
+			if (!_isLoading)
+				return;
+			
+			var rest:int = _currLoadFilesCount - _currLoadedFilesCount - _currLoadErrorFilesCount;
+			while (_currLoadingFilesCount < (_concurrent>rest ? rest:_concurrent) )
+			{
+				// 在本次加载队列中寻找一个【不在加载中】【没有加载成功】【没有加载出错】的文件进行加载操作
+				var readyFileVO:SLoaderFile = null;
+				for each(var file:SLoaderFile in _currLoadFiles)
+				{
+					if (
+						_currLoadingFiles.indexOf(file) == -1 && 
+						_loadedFiles.indexOf(file) == -1 &&
+						_currLoadErrorFiles.indexOf(file) == -1
+					){
+						_currLoadingFiles.push(file);
+						_currLoadingFilesCount = _currLoadingFiles.length;
+						
+						readyFileVO = file;
+						
+						if (!_loadInfo.currLoadingFiles)
+							_loadInfo.currLoadingFiles = [];
+						_loadInfo.currLoadingFiles.push(file);
+						
+						// trace("【并发机制】新增文件下载["+file.name+"]----当前并发["+_currLoadingFiles.length+"], 系统允许最高["+(_concurrent > rest ? rest:_concurrent)+"]");
+						break;
+					}
+				}
+				
+				if (readyFileVO)
+					_execute(readyFileVO);
+			}
+		}
+		
 		private function _execute(fileVO:SLoaderFile):void
 		{
 			// 如果执行加载的文件
@@ -204,21 +243,47 @@ package com.sloader
 			)
 				return;
 			
-			var fileType:String = SLoaderManage.instance.getFileType(fileVO).toLowerCase();
-			var loadHandlerClass:Class = SLoaderManage.instance.getFileLoadHandler(fileType);
+			var fileType:String = SLoaderHelper.getFileType(fileVO).toLowerCase();
+			var loadHandlerClass:Class = _fileHandlers[fileType];
 			if (!loadHandlerClass)
 			{
 				throw new Error("you not registered handler on ["+fileType+"]");
 			}
 			else
 			{
-				var loadHandler:LoadHandler = new loadHandlerClass(fileVO, _loaderContext);
-				loadHandler.setFileCompleteEventHandler(onFileComplete);
-				loadHandler.setFileProgressEventHandler(onFileProgress);
-				loadHandler.setFileStartEventHandler(onFileStart);
-				loadHandler.setFileIoErrorEventHandler(onFileIoError);
-				loadHandler.load();
+				if(!getFileVO(fileVO.title) || _currLoadCover)
+				{
+					// 这个文件一定要执行加载操作
+					var loadHandler:SLoadHandler = new loadHandlerClass(fileVO, _loaderContext);
+					loadHandler.setFileCompleteEventHandler(onFileComplete);
+					loadHandler.setFileProgressEventHandler(onFileProgress);
+					loadHandler.setFileStartEventHandler(onFileStart);
+					loadHandler.setFileIoErrorEventHandler(onFileIoError);
+					loadHandler.startLoad();
+				}
+				else
+				{
+					// 不用加载了, 直接抛出事件
+					onFileComplete(fileVO);
+				}
 			}
+		}
+		
+		public function stop():void
+		{
+			// 不再继续加载
+			_isLoading = false;
+			
+			// 停止当前加载
+			for (var i:int=0; i<_currLoadingFiles.length; i++)
+			{
+				var loadInfo:SLoaderFileInfo = (_currLoadingFiles[i] as SLoaderFile).loaderInfo;
+				if (loadInfo)
+					loadInfo.loadHandler.stopLoad();
+			}
+			
+			// 清除事件侦听
+			initializeEventHandler();
 		}
 		
 		///////////////////////////////////////////////////////////////////////////
@@ -279,8 +344,6 @@ package com.sloader
 				if (infoLoadingIndex != -1)
 					_loadInfo.currLoadingFiles.splice(infoLoadingIndex, 1);
 			}
-			
-			SLoaderManage.instance.addFileToGroup(fileVO.group, fileVO);
 			
 			var hasfile:Boolean = _currLoadFilesCount > _currLoadedFilesCount;
 			_isLoading = hasfile;
@@ -355,6 +418,7 @@ package com.sloader
 		private function onSloaderComplete():void
 		{
 			executeHandlers(_eventHandlers[SLoaderEventType.SLOADER_COMPLETE], _loadInfo);
+			initializeEventHandler();
 		}
 		
 		private function executeHandlers(handlers:Array, file:*):void
@@ -363,42 +427,6 @@ package com.sloader
 			{
 				var handler:Function = handlers[i];
 				handler(file);
-			}
-		}
-		
-		///////////////////////////////////////////////////////////////////////////
-		// 并发加载机制
-		///////////////////////////////////////////////////////////////////////////
-		private function executeConcurrent():void
-		{
-			var rest:int = _currLoadFilesCount - _currLoadedFilesCount - _currLoadErrorFilesCount;
-			while (_currLoadingFilesCount < (_concurrent>rest ? rest:_concurrent) )
-			{
-				// 在本次加载队列中寻找一个【不在加载中】【没有加载成功】【没有加载出错】的文件进行加载操作
-				var readyFileVO:SLoaderFile = null;
-				for each(var file:SLoaderFile in _currLoadFiles)
-				{
-					if (
-						_currLoadingFiles.indexOf(file) == -1 && 
-						_loadedFiles.indexOf(file) == -1 &&
-						_currLoadErrorFiles.indexOf(file) == -1
-					){
-						_currLoadingFiles.push(file);
-						_currLoadingFilesCount = _currLoadingFiles.length;
-						
-						readyFileVO = file;
-						
-						if (!_loadInfo.currLoadingFiles)
-							_loadInfo.currLoadingFiles = [];
-						_loadInfo.currLoadingFiles.push(file);
-						
-//						trace("【并发机制】新增文件下载["+file.name+"]----当前并发["+_currLoadingFiles.length+"], 系统允许最高["+(_concurrent > rest ? rest:_concurrent)+"]");
-						break;
-					}
-				}
-				
-				if (readyFileVO)
-					_execute(readyFileVO);
 			}
 		}
 		
@@ -423,17 +451,17 @@ package com.sloader
 				throw new Error("The fileVO parameter is incorrect");
 		}
 		
-		private function checkRepeatFileVO(fileVO:SLoaderFile):void
+		private function checkRepeatFileVO(fileVO:SLoaderFile):Boolean
 		{
-			var globalHasFileVO:Boolean = SLoaderManage.instance.getFileVO(fileVO.title) != null;
-			if (globalHasFileVO)
-				throw new Error("Duplication of add file(title:"+fileVO.title+")");
+			if (getFileVO(fileVO.title) != null)
+				return true;
 			
 			for each(var file:SLoaderFile in _currLoadFiles)
 			{
 				if (file.title == fileVO.title)
-					throw new Error("Duplication of add file(title:"+fileVO.title+")");
+					return true;
 			}
+			return false;
 		}
 		
 		///////////////////////////////////////////////////////////////////////////
@@ -468,7 +496,7 @@ package com.sloader
 			_loadInfo.loadedBytes = _loadedBytes;
 		}
 		
-		private function get loadedBytes():Number
+		public function get loadedBytes():Number
 		{
 			return _loadedBytes;
 		}
@@ -479,7 +507,7 @@ package com.sloader
 			_loadInfo.currLoadedBytes = _currLoadedBytes;
 		}
 		
-		private function get currLoadedBytes():Number
+		public function get currLoadedBytes():Number
 		{
 			return _currLoadedBytes;
 		}
@@ -490,7 +518,7 @@ package com.sloader
 			_loadInfo.currTotalBytes = value;
 		}
 		
-		private function get currTotalBytes():Number
+		public function get currTotalBytes():Number
 		{
 			return _currTotalBytes;
 		}
@@ -501,7 +529,7 @@ package com.sloader
 			_loadInfo.currLoadPercentage = value;
 		}
 		
-		private function get currLoadPercentage():Number
+		public function get currLoadPercentage():Number
 		{
 			return _currLoadPercentage;
 		}

@@ -1,7 +1,7 @@
-package com.sloader.loadhandlers
+package com.sloader.handlers
 {
-	import com.sloader.SLoaderError;
-	import com.sloader.SLoaderFile;
+	import com.sloader.define.SLoaderError;
+	import com.sloader.define.SLoaderFile;
 	
 	import flash.events.Event;
 	import flash.events.IOErrorEvent;
@@ -9,64 +9,66 @@ package com.sloader.loadhandlers
 	import flash.net.URLLoader;
 	import flash.net.URLLoaderDataFormat;
 	import flash.net.URLRequest;
-	import flash.net.URLStream;
 	import flash.system.LoaderContext;
-	import flash.utils.ByteArray;
-
-	public class Binary_LoadHandler extends LoadHandler
+	import flash.text.StyleSheet;
+	
+	public class SLoadHandler_CSS extends SLoadHandler
 	{
-		public var data:ByteArray = new ByteArray();
+		public var data:StyleSheet;
 		
-		private var _loader:URLStream;
+		private var _loader:URLLoader;
 		
-		public function Binary_LoadHandler(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoadHandler_CSS(fileVO:SLoaderFile, loaderContent:LoaderContext)
 		{
-			super(fileVO, loaderContext);
-
-			_file.loaderInfo.loadHandler = this;
+			super(fileVO, loaderContent);
 			
-			_loader = new URLStream();
+			_loader.dataFormat = URLLoaderDataFormat.TEXT;
+			
+			_loader = new URLLoader();
 			_loader.addEventListener(Event.OPEN, onFileStart);
 			_loader.addEventListener(ProgressEvent.PROGRESS, onFileProgress);
 			_loader.addEventListener(Event.COMPLETE, onFileComplete);
 			_loader.addEventListener(IOErrorEvent.IO_ERROR, onFileIoError);
 		}
-
+		
 		protected function onFileIoError(event:IOErrorEvent):void
 		{
 			var error:SLoaderError = new SLoaderError(_file, event.text);
-
+			
 			if (_onFileIoError != null)
 				_onFileIoError(error);
 		}
-
+		
 		protected function onFileComplete(event:Event):void
 		{
-			_file.size = event.currentTarget.bytesAvailable;
-
-			_loader.readBytes(data);
+			_file.size = event.currentTarget.bytesTotal;
+			_file.loaderInfo.loadedBytes = event.currentTarget.bytesLoaded;
+			_file.loaderInfo.totalBytes = event.currentTarget.bytesTotal;
+			
+			data = new StyleSheet();
+			data.parseCSS(_loader.data);
 			
 			if (_onFileComplete != null)
 				_onFileComplete(_file);
 		}
-
+		
 		protected function onFileProgress(event:ProgressEvent):void
 		{
 			_file.size = event.bytesTotal;
 			_file.loaderInfo.totalBytes = event.bytesTotal;
 			_file.loaderInfo.loadedBytes = event.bytesLoaded;
-
+			
 			if (_onFileProgress != null)
 				_onFileProgress(_file);
 		}
-
+		
 		protected function onFileStart(event:Event):void
 		{
 			if (_onFileStart != null)
 				_onFileStart(_file);
 		}
-
-		override public function load():void
+		
+		override public function startLoad():void
 		{
 			var urlRequest:URLRequest = new URLRequest(_file.url);
 			_loader.load(urlRequest);

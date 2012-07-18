@@ -1,4 +1,4 @@
-package com.sloader
+package com.sloader.define
 {
 	import flash.system.LoaderContext;
 
