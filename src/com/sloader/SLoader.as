@@ -29,6 +29,8 @@ package com.sloader
 		
 		private var _loadedFiles:Array;
 		
+		private var _loadedGroups:Dictionary;
+		
 		private var _loadedBytes:Number;
 		
 		private const _concurrent:uint = 3;
@@ -85,6 +87,8 @@ package com.sloader
 			_loadInfo.currLoadingFiles = [];
 			
 			_lastProgressLoadedBytes = {};
+			
+			_loadedGroups = new Dictionary();
 		}
 		
 		private function initializeEventHandler():void
@@ -351,6 +355,11 @@ package com.sloader
 			if (!hasfile)
 				_currLoadFiles.length = 0;
 			
+			// 将文件纳入组，只对加载成功的文件有效，组内存在相同文件则用最新的替换旧的
+			if (_loadedGroups[fileVO.group])
+				_loadedGroups[fileVO.group] = {};
+			_loadedGroups[fileVO.group][fileVO.title] = fileVO;
+			
 			executeHandlers(_eventHandlers[SLoaderEventType.FILE_COMPLETE], fileVO);
 			
 //			var rest:int = _currLoadFiles.length - _currLoadedFiles.length - _currLoadErrorFiles.length;
@@ -478,6 +487,11 @@ package com.sloader
 					return fileVO;
 			}
 			return null;
+		}
+		
+		public function getGroupFiles(groupName:String):Object
+		{
+			return _loadedGroups[groupName];
 		}
 		
 		public function get loadInfo():SLoaderInfo
