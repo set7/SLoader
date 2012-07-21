@@ -11,13 +11,13 @@ package com.sloader.handlers
 	import flash.net.URLRequest;
 	import flash.system.LoaderContext;
 	
-	public class SLoadHandler_Image extends SLoadHandler
+	public class SLoaderHandler_Image extends SLoaderHandler
 	{
-		public var bitmap:Bitmap;
+		public var data:Bitmap;
 		
 		private var _loader:Loader;
 		
-		public function SLoadHandler_Image(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoaderHandler_Image(fileVO:SLoaderFile, loaderContext:LoaderContext)
 		{
 			super(fileVO, loaderContext);
 			
@@ -42,7 +42,7 @@ package com.sloader.handlers
 			_file.loaderInfo.loadedBytes = event.currentTarget.bytesLoaded;
 			_file.loaderInfo.totalBytes = event.currentTarget.bytesTotal;
 			
-			bitmap = _loader.content as Bitmap;
+			data = _loader.content as Bitmap;
 			
 			if (_onFileComplete != null)
 				_onFileComplete(_file);
@@ -74,7 +74,7 @@ package com.sloader.handlers
 		{
 			super.unLoad();
 			_loader.unload();
-			bitmap = null;
+			data = null;
 		}
 	}
 }

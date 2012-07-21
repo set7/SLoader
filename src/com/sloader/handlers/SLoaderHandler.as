@@ -5,7 +5,7 @@ package com.sloader.handlers
 	
 	import flash.system.LoaderContext;
 
-	public class SLoadHandler
+	public class SLoaderHandler
 	{
 		protected var _file:SLoaderFile;
 		protected var _loaderContext:LoaderContext;
@@ -15,10 +15,11 @@ package com.sloader.handlers
 		protected var _onFileStart:Function = null;
 		protected var _onFileIoError:Function = null;
 
-		public function SLoadHandler(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoaderHandler(fileVO:SLoaderFile, loaderContext:LoaderContext)
 		{
 			_file = fileVO;
 			_file.loaderInfo = new SLoaderFileInfo();
+			_file.loaderInfo.loaderHandler = this;
 			_loaderContext = loaderContext;
 		}
 

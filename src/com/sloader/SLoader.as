@@ -6,12 +6,12 @@ package com.sloader
 	import com.sloader.define.SLoaderFileInfo;
 	import com.sloader.define.SLoaderFileType;
 	import com.sloader.define.SLoaderInfo;
-	import com.sloader.handlers.SLoadHandler;
-	import com.sloader.handlers.SLoadHandler_Binary;
-	import com.sloader.handlers.SLoadHandler_CSS;
-	import com.sloader.handlers.SLoadHandler_Image;
-	import com.sloader.handlers.SLoadHandler_SWF;
-	import com.sloader.handlers.SLoadHandler_XML;
+	import com.sloader.handlers.SLoaderHandler;
+	import com.sloader.handlers.SLoaderHandler_Binary;
+	import com.sloader.handlers.SLoaderHandler_CSS;
+	import com.sloader.handlers.SLoaderHandler_Image;
+	import com.sloader.handlers.SLoaderHandler_SWF;
+	import com.sloader.handlers.SLoaderHandler_XML;
 	
 	import flash.system.ApplicationDomain;
 	import flash.system.LoaderContext;
@@ -105,13 +105,14 @@ package com.sloader
 		
 		private function initializeFileHandler():void
 		{
-			_fileHandlers[SLoaderFileType.SWF.toLowerCase()] = SLoadHandler_SWF;
-			_fileHandlers[SLoaderFileType.XML.toLowerCase()] = SLoadHandler_XML;
-			_fileHandlers[SLoaderFileType.PNG.toLowerCase()] = SLoadHandler_Image;
-			_fileHandlers[SLoaderFileType.JPG.toLowerCase()] = SLoadHandler_Image;
-			_fileHandlers[SLoaderFileType.BMP.toLowerCase()] = SLoadHandler_Image;
-			_fileHandlers[SLoaderFileType.CSS.toLowerCase()] = SLoadHandler_CSS;
-			_fileHandlers[SLoaderFileType.DAT.toLowerCase()] = SLoadHandler_Binary;
+			_fileHandlers = {};
+			_fileHandlers[SLoaderFileType.SWF.toLowerCase()] = SLoaderHandler_SWF;
+			_fileHandlers[SLoaderFileType.XML.toLowerCase()] = SLoaderHandler_XML;
+			_fileHandlers[SLoaderFileType.PNG.toLowerCase()] = SLoaderHandler_Image;
+			_fileHandlers[SLoaderFileType.JPG.toLowerCase()] = SLoaderHandler_Image;
+			_fileHandlers[SLoaderFileType.BMP.toLowerCase()] = SLoaderHandler_Image;
+			_fileHandlers[SLoaderFileType.CSS.toLowerCase()] = SLoaderHandler_CSS;
+			_fileHandlers[SLoaderFileType.DAT.toLowerCase()] = SLoaderHandler_Binary;
 		}
 		
 		///////////////////////////////////////////////////////////////////////////
@@ -258,7 +259,7 @@ package com.sloader
 				if(!getFileVO(fileVO.title) || _currLoadCover)
 				{
 					// 这个文件一定要执行加载操作
-					var loadHandler:SLoadHandler = new loadHandlerClass(fileVO, _loaderContext);
+					var loadHandler:SLoaderHandler = new loadHandlerClass(fileVO, _loaderContext);
 					loadHandler.setFileCompleteEventHandler(onFileComplete);
 					loadHandler.setFileProgressEventHandler(onFileProgress);
 					loadHandler.setFileStartEventHandler(onFileStart);
@@ -283,7 +284,7 @@ package com.sloader
 			{
 				var loadInfo:SLoaderFileInfo = (_currLoadingFiles[i] as SLoaderFile).loaderInfo;
 				if (loadInfo)
-					loadInfo.loadHandler.stopLoad();
+					loadInfo.loaderHandler.stopLoad();
 			}
 			
 			// 清除事件侦听
@@ -356,7 +357,7 @@ package com.sloader
 				_currLoadFiles.length = 0;
 			
 			// 将文件纳入组，只对加载成功的文件有效，组内存在相同文件则用最新的替换旧的
-			if (_loadedGroups[fileVO.group])
+			if (!_loadedGroups[fileVO.group])
 				_loadedGroups[fileVO.group] = {};
 			_loadedGroups[fileVO.group][fileVO.title] = fileVO;
 			
@@ -427,7 +428,6 @@ package com.sloader
 		private function onSloaderComplete():void
 		{
 			executeHandlers(_eventHandlers[SLoaderEventType.SLOADER_COMPLETE], _loadInfo);
-			initializeEventHandler();
 		}
 		
 		private function executeHandlers(handlers:Array, file:*):void
@@ -510,7 +510,7 @@ package com.sloader
 			_loadInfo.loadedBytes = _loadedBytes;
 		}
 		
-		public function get loadedBytes():Number
+		private function get loadedBytes():Number
 		{
 			return _loadedBytes;
 		}
@@ -521,7 +521,7 @@ package com.sloader
 			_loadInfo.currLoadedBytes = _currLoadedBytes;
 		}
 		
-		public function get currLoadedBytes():Number
+		private function get currLoadedBytes():Number
 		{
 			return _currLoadedBytes;
 		}
@@ -532,7 +532,7 @@ package com.sloader
 			_loadInfo.currTotalBytes = value;
 		}
 		
-		public function get currTotalBytes():Number
+		private function get currTotalBytes():Number
 		{
 			return _currTotalBytes;
 		}
@@ -543,7 +543,7 @@ package com.sloader
 			_loadInfo.currLoadPercentage = value;
 		}
 		
-		public function get currLoadPercentage():Number
+		private function get currLoadPercentage():Number
 		{
 			return _currLoadPercentage;
 		}

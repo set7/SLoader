@@ -1,8 +1,9 @@
 package com.sloader.define
 {
-	import com.sloader.handlers.SLoadHandler;
+	import com.sloader.handlers.SLoaderHandler;
 	
 	import flash.system.ApplicationDomain;
+	import flash.system.LoaderContext;
 
 	public class SLoaderFileInfo
 	{
@@ -10,6 +11,6 @@ package com.sloader.define
 		
 		public var totalBytes:int;
 		
-		public var loadHandler:SLoadHandler;
+		public var loaderHandler:SLoaderHandler;
 	}
 }

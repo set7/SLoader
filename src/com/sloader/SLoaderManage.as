@@ -6,6 +6,8 @@ package com.sloader
 		{
 			if (_instance)
 				throw new Error("SLoaderManage is Singleton");
+			
+			initialize();
 		}
 		
 		private static var _instance:SLoaderManage;
@@ -18,12 +20,18 @@ package com.sloader
 		
 		//////////////////////////////////////////////////////////////////////////////////
 		private var _sloaders:Object;
+		
+		private function initialize():void
+		{
+			_sloaders = [];
+		}
+		
 		public function addSLoader(named:String, sloaderd:SLoader):void
 		{
 			_sloaders[named] = sloaderd;
 		}
 		
-		public function getSLoader(sloaderName):SLoader
+		public function getSLoader(sloaderName:String):SLoader
 		{
 			return _sloaders[sloaderName];
 		}

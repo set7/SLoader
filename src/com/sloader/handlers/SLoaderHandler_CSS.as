@@ -10,62 +10,64 @@ package com.sloader.handlers
 	import flash.net.URLLoaderDataFormat;
 	import flash.net.URLRequest;
 	import flash.system.LoaderContext;
-
-	public class SLoadHandler_XML extends SLoadHandler
+	import flash.text.StyleSheet;
+	
+	public class SLoaderHandler_CSS extends SLoaderHandler
 	{
-		public var data:XML;
-
+		public var data:StyleSheet;
+		
 		private var _loader:URLLoader;
 		
-		public function SLoadHandler_XML(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoaderHandler_CSS(fileVO:SLoaderFile, loaderContent:LoaderContext)
 		{
-			super(fileVO, loaderContext);
+			super(fileVO, loaderContent);
 			
-			_loader = new URLLoader();
 			_loader.dataFormat = URLLoaderDataFormat.TEXT;
 			
+			_loader = new URLLoader();
 			_loader.addEventListener(Event.OPEN, onFileStart);
 			_loader.addEventListener(ProgressEvent.PROGRESS, onFileProgress);
 			_loader.addEventListener(Event.COMPLETE, onFileComplete);
 			_loader.addEventListener(IOErrorEvent.IO_ERROR, onFileIoError);
 		}
-
+		
 		protected function onFileIoError(event:IOErrorEvent):void
 		{
 			var error:SLoaderError = new SLoaderError(_file, event.text);
-
+			
 			if (_onFileIoError != null)
 				_onFileIoError(error);
 		}
-
+		
 		protected function onFileComplete(event:Event):void
 		{
 			_file.size = event.currentTarget.bytesTotal;
 			_file.loaderInfo.loadedBytes = event.currentTarget.bytesLoaded;
 			_file.loaderInfo.totalBytes = event.currentTarget.bytesTotal;
-
-			data = new XML(event.target.data);
+			
+			data = new StyleSheet();
+			data.parseCSS(_loader.data);
 			
 			if (_onFileComplete != null)
 				_onFileComplete(_file);
 		}
-
+		
 		protected function onFileProgress(event:ProgressEvent):void
 		{
 			_file.size = event.bytesTotal;
 			_file.loaderInfo.totalBytes = event.bytesTotal;
 			_file.loaderInfo.loadedBytes = event.bytesLoaded;
-
+			
 			if (_onFileProgress != null)
 				_onFileProgress(_file);
 		}
-
+		
 		protected function onFileStart(event:Event):void
 		{
 			if (_onFileStart != null)
 				_onFileStart(_file);
 		}
-
+		
 		override public function startLoad():void
 		{
 			var urlRequest:URLRequest = new URLRequest(_file.url);

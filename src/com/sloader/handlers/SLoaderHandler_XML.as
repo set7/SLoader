@@ -3,26 +3,31 @@ package com.sloader.handlers
 	import com.sloader.define.SLoaderError;
 	import com.sloader.define.SLoaderFile;
 	
-	import flash.display.Loader;
 	import flash.events.Event;
 	import flash.events.IOErrorEvent;
 	import flash.events.ProgressEvent;
+	import flash.net.URLLoader;
+	import flash.net.URLLoaderDataFormat;
 	import flash.net.URLRequest;
 	import flash.system.LoaderContext;
 
-	public class SLoadHandler_SWF extends SLoadHandler
+	public class SLoaderHandler_XML extends SLoaderHandler
 	{
-		private var _loader:Loader;
+		public var data:XML;
+
+		private var _loader:URLLoader;
 		
-		public function SLoadHandler_SWF(fileVO:SLoaderFile, loaderContext:LoaderContext)
+		public function SLoaderHandler_XML(fileVO:SLoaderFile, loaderContext:LoaderContext)
 		{
 			super(fileVO, loaderContext);
 			
-			_loader = new Loader();
-			_loader.contentLoaderInfo.addEventListener(Event.OPEN, onFileStart);
-			_loader.contentLoaderInfo.addEventListener(ProgressEvent.PROGRESS, onFileProgress);
-			_loader.contentLoaderInfo.addEventListener(Event.COMPLETE, onFileComplete);
-			_loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, onFileIoError);
+			_loader = new URLLoader();
+			_loader.dataFormat = URLLoaderDataFormat.TEXT;
+			
+			_loader.addEventListener(Event.OPEN, onFileStart);
+			_loader.addEventListener(ProgressEvent.PROGRESS, onFileProgress);
+			_loader.addEventListener(Event.COMPLETE, onFileComplete);
+			_loader.addEventListener(IOErrorEvent.IO_ERROR, onFileIoError);
 		}
 
 		protected function onFileIoError(event:IOErrorEvent):void
@@ -39,6 +44,8 @@ package com.sloader.handlers
 			_file.loaderInfo.loadedBytes = event.currentTarget.bytesLoaded;
 			_file.loaderInfo.totalBytes = event.currentTarget.bytesTotal;
 
+			data = new XML(event.target.data);
+			
 			if (_onFileComplete != null)
 				_onFileComplete(_file);
 		}
@@ -62,13 +69,13 @@ package com.sloader.handlers
 		override public function startLoad():void
 		{
 			var urlRequest:URLRequest = new URLRequest(_file.url);
-			_loader.load(urlRequest, _loaderContext);
+			_loader.load(urlRequest);
 		}
 		
 		override public function unLoad():void
 		{
 			super.unLoad();
-			_loader.unload();
+			data = null;
 		}
 	}
 }
