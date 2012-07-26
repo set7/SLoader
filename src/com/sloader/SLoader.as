@@ -62,7 +62,7 @@ package com.sloader
 		{
 			SLoaderManage.instance.addSLoader(name, this);
 			
-			_loaderContext = loaderContext;
+			_loaderContext = loaderContext ? loaderContext:new LoaderContext(false, ApplicationDomain.currentDomain, SecurityDomain.currentDomain);
 			
 			initializeEventHandler();
 			initializeFileHandler();
