@@ -33,7 +33,7 @@ package com.sloader
 		
 		private var _loadedBytes:Number;
 		
-		private const _concurrent:uint = 3;
+		private const _concurrent:uint = 20;
 		
 		////////////////////////////////////////////////////////////////////////
 		private var _isLoading:Boolean;
@@ -180,6 +180,8 @@ package com.sloader
 			}
 			
 			currLoadedBytes = 0;
+			
+			_currLoadPercentage = 0;
 			
 			_loadInfo.currTotalFilesCount = _currLoadFiles.length;
 			
@@ -413,8 +415,7 @@ package com.sloader
 			loadedBytes += Number(_lastProgressLoadedBytes[currFileVO.title]);
 			if (isNaN(_currTotalBytes))
 			{
-				currLoadPercentage = _currLoadedFilesCount/_currLoadFilesCount
-					+ currFileVO.loaderInfo.loadedBytes/currFileVO.loaderInfo.totalBytes/_currLoadFilesCount;
+				currLoadPercentage += _lastProgressLoadedBytes[currFileVO.title]/currFileVO.loaderInfo.totalBytes/_currLoadFilesCount;
 			}
 			else
 			{
