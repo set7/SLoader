@@ -13,27 +13,141 @@ package com.sloader
 	import com.sloader.handlers.SLoaderHandler_SWF;
 	import com.sloader.handlers.SLoaderHandler_XML;
 	
-	import flash.system.ApplicationDomain;
 	import flash.system.LoaderContext;
-	import flash.system.SecurityDomain;
 	import flash.utils.Dictionary;
 
+	/**
+	 * SLoader资源加载管理器
+	 * 
+	 * #使用说明########################################################################################################################################################################
+	 * 
+	 * -------------------------------------
+	 * 初始化加载引擎
+	 * -------------------------------------
+	 *  	编写如下代码：
+	 * 		=============================================
+	 * 		var sloader:SLoader = new SLoader("mySLoader", loaderContent=null);
+	 * 		=============================================
+	 * 		代码说明：
+	 * 			如上代码建立一个名称为"mySLoader"的加载器,同时你也可以设置loaderContent,设置后使用该SLoader实例加载的所有文件都位于该域
+	 * 			在其他文件中你可以使用SLoaderManage.instance.getSLoader(sloaderName:String):SLoader函数获取sloader实例
+	 * 
+	 * -------------------------------------
+	 * 准备加载文件
+	 * -------------------------------------
+	 * 		SLoader只能加载SLoaderFile类型的文件,所以在执行加载前必须将准备加载文件转换为SLoaderFile类型
+	 * 		例：比如当前需要加载 "image/scene1.png"
+	 * 
+	 * 		编写如下代码：
+	 * 		=============================================
+	 * 		var file:SLoaderFile = new SLoaderFile();
+	 * 		file.name = "scene1";
+	 * 		file.title = "scene1";
+	 * 		file.url = "image/scene1.png";
+	 * 		file.group = "scene";
+	 * 		=============================================
+	 * 		代码说明：
+	 * 			必须填写如上四个属性才能成功将该文件纳入SLoader加载队列中。
+	 *
+	 *  		name(文件名称,可重复)
+	 * 
+	 * 			title(文件索引,如果重复,那么当本次加载设置为强制刷新的话将覆盖之前相同命名的文件)
+	 * 
+	 * 			url(文件地址,如果位于其他安全域则需要考虑双方安全策略)
+	 * 
+	 * 			group(文件加载成功后将文件纳入group属性名称的组中, 可以使用SLoader中getGroupFiles(groupName:String)获取对应组内所有文件)
+	 * 
+	 * --------------------------------------
+	 * 执行加载文件操作
+	 * --------------------------------------
+	 * 		当新建好一个正确的SLoaderFile文件后就可以将其放入加载队列,然后执行execute(coverRepeatTitle:Bool)函数
+	 * 
+	 * 		编写如下代码：
+	 * 		=============================================
+	 * 		sloader.addFile(file);
+	 * 		sloader.execute(true);
+	 * 		=============================================
+	 * 		代码说明：
+	 * 			在执行execute函数中有个bool值的参数,当值为true的时候, 会对本次加载队列中的文件进行强制刷新。
+	 * 			强制刷新也就是说如果加载时出现于已加载文件的title属性相同的情况,则旧的文件会被新文件替换，反之则相反
+	 * 		
+	 * --------------------------------------
+	 * 获取加载的文件数据
+	 * --------------------------------------
+	 * 		当文件加载成功后我想获得某个文件,我只需要提供文件titile
+	 * 		
+	 * 		编写如下代码
+	 * 		=============================================
+	 * 		var file:SLoaderFile = sloader.getFileVO("scene1");
+	 * 		var bitmap:Bitmap = SLoaderHandler_Image(file.loadInfo.loaderHandler).data;
+	 *  	=============================================
+	 * 		代码说明:
+	 * 			我们提供对应的title并利用不同的文件处理程序来获取data就是我们想要的类型数据了
+	 * 
+	 * --------------------------------------
+	 * 侦听事件
+	 * --------------------------------------
+	 * 		可以对加载过程使用事件监听器
+	 * 		
+	 * 		使用函数：
+	 * 			public function addEventListener(type:String, handler:Function):void
+	 * 			public function removeEventListener(type:String, handler:Function):void
+	 * 
+	 * 		支持事件位于(SLoaderEventType)
+	 * 
+	 * 			代码：
+	 * 			=============================================
+	 * 			sloader.addEventListener(XXX, myFunction);
+	 * 			=============================================
+	 * 			说明：
+	 * 				myFunction必须包含一个参数
+	 * 				不同事件抛出的消息类型是不一样的
+	 * 
+	 * 					比如[FILE_START]事件抛出的就是SLoaderFile,也就是说我们的事件处理函数的参数类型必须是SLoaderFile类型的
+	 * 						sloader.addEventListener(SLoaderEventType.FILE_PROGRESS, myFunction);
+	 * 						private function myFunction(file:SLoaderFile):void
+	 * 						{
+	 * 							trace("正在加载文件:"+file.name, "  已加载"+file.loaderInfo.loadedBytes);
+	 * 						}
+	 * 					下面列出所有事件抛出的消息类型
+	 * 					SLoaderFile = FILE_START
+	 *  				SLoaderFile = FILE_PROGRESS
+	 *  				SLoaderFile = FILE_COMPLETE
+	 *  				SLoaderError = FILE_ERROR
+	 *  				SLoaderInfo = SLOADER_START
+	 *  				SLoaderInfo = SLOADER_PROGRESS
+	 *  				SLoaderInfo = SLOADER_COMPLETE
+	 * 
+	 * 				我们可以通过抛出的消息文件获取当前加载的文件信息以及加载情况,，具体请看对应消息类型文件里面有说明.
+	 * 		
+	 * @author number1 at 2012-07-27
+	 * ############################################################################################################################################################################
+	 */	
 	public class SLoader
 	{
+		// 当前加载器加载文件所在域
 		private var _loaderContext:LoaderContext;
 		
+		// 当前SLoader实例状态映像
 		private var _loadInfo:SLoaderInfo;
 		
+		// 事件哈希表
 		private var _eventHandlers:Dictionary;
+		
+		// 文件类型对应加载器
 		private var _fileHandlers:Object;
 		
+		// 所有已经加载成功的文件
 		private var _loadedFiles:Array;
 		
+		// 所有组分类
 		private var _loadedGroups:Dictionary;
 		
+		// 所有已经加载的字节数
 		private var _loadedBytes:Number;
 		
-		private const _concurrent:uint = 20;
+		// 系统同时并发加载量
+		private const _concurrent:uint = 2;
 		
 		////////////////////////////////////////////////////////////////////////
 		private var _isLoading:Boolean;
@@ -120,11 +234,17 @@ package com.sloader
 		///////////////////////////////////////////////////////////////////////////
 		public function addFile(fileVO:SLoaderFile):void
 		{
+			// 防止系统加载过程中将文件添加至加载列表
 			checkLoadIt();
+			
+			// 防止出现不合法文件
 			checkFileVO(fileVO);
+			
+			// 提示有重复可能会覆盖老文件
 			if (checkRepeatFileVO(fileVO))
 				trace("To Find duplicate (title) attribute of the file on use addFile method");
 			
+			// 成功添加
 			_currLoadFiles.push(fileVO);
 		}
 		
